@@ -8,62 +8,63 @@
 #include "math.h"
 #include "gmath.h"
 
+#define min(a,b) ((a)<(b)?(a):(b))
+#define max(a,b) ((a)>(b)?(a):(b))
+
 void scanline_convert( struct matrix *points, int i, screen s, zbuffer zb , color c) {
     double dxl, dxr, dzl, dzr;
     int top, mid, bot;
     double y0 = points->m[1][i];
     double y1 = points->m[1][i + 1];
     double y2 = points->m[1][i + 2];
-    if (y0 < y1){
-        if (y1 < y2){
-            top = i + 2;
-            mid = i + 1;
-            bot = i;
-        }
-        else{
-	    if(y0 < y2){
-            	top = i + 1;
-                mid = i + 2;
-                bot = i;
-	    }
-	    else{
+   
+    if (min(min(y0, y1), y2) == y0){
+    	bot = i;
+	if (min(y1, y2) == y1){
+		mid = i + 1;
+		top = i + 2;
+	}
+	else{
+		mid = i + 2;
 		top = i + 1;
+	}
+    }
+    if (min(min(y0, y1), y2) == y1){
+    	bot = i + 1;
+	if (min(y0, y2) == y0){
 		mid = i;
-		bot = i + 2;		
-	    }
-        }
+		top = i + 2;
+	}
+	else{
+		mid = i + 2;
+		top = i;
+	}
     }
-    else{
-        if (y1 > y2){
-            top = i;
-            mid = i + 1;
-            bot = i + 2;
-        }
-        else{
-            if (y0 > y2){
-                top = i;
-                mid = i + 2;
-                bot = i + 1;
-            }
-            else{
-                top = i + 2;
-                mid = i;
-                bot = i + 1;
-            }
-        }
+    if (min(min(y0, y1), y2) == y2){
+    	bot = i + 2;
+	if (min(y0, y1) == y0){
+		mid = i;
+		top = i + 1;
+	}
+	else{
+		mid = i + 1;
+		top = i;
+	}
     }
+
+
+
 
     //top x0, y0, z0
     //mid x1, y1, z1
     //bot x2, y2, z2
+    double x0 = points->m[0][top];
+    double x1 = points->m[0][mid];
+    double x2 = points->m[0][bot];
 
     y0 = points->m[1][top];
     y1 = points->m[1][mid];
     y2 = points->m[1][bot];
-
-    double x0 = points->m[0][top];
-    double x1 = points->m[0][mid];
-    double x2 = points->m[0][bot];
 
     double z0 = points->m[2][top];
     double z1 = points->m[2][mid];
@@ -73,13 +74,15 @@ void scanline_convert( struct matrix *points, int i, screen s, zbuffer zb , colo
     dxl = (x1 - x2) / (y1 - y2);
     dzr = (z0 - z2) / (y0 - y2);
     dzl = (z1 - z2) / (y1 - y2);
-    if (y0 == y2) {
-	    dxr = 0; 
-	    dzr = 0;
+    if (y0 == y2 || y0 == y1) {
+	    if (x1 < x2) dxr = 0;
+	    else dxl = 0; 
+	    dzl = (z1 - z0) / (x1 - x0);
     }
     if (y1 == y2) {
-    	dxl = 0;
-	dzl = 0;
+    	if (x1 < x2) dxl = 0;
+	else dxr = 0;
+	dzr = (z1 - z2) / (x1 - x2);
     }
 
     double yc = y2;
@@ -99,6 +102,18 @@ void scanline_convert( struct matrix *points, int i, screen s, zbuffer zb , colo
 
     dxl = (x0 - x1) / (y0 - y1);
     dzl = (z0 - z1) / (y0 - y1);
+    
+    if (y0 == y2) {
+	    if (x1 < x2) dxr = 0;
+	    else dxl = 0; 
+	    dzl = (z1 - z0) / (x1 - x0);
+    }
+    if (y1 == y2) {
+    	if (x1 < x2) dxl = 0;
+	else dxr = 0;
+	dzr = (z1 - z2) / (x1 - x2);
+    }
+
     yc = y1;
     c.red = MAX_COLOR;
     while(yc < y0){
@@ -109,12 +124,86 @@ void scanline_convert( struct matrix *points, int i, screen s, zbuffer zb , colo
 	zright += dzr;
 
 	draw_line((int)xleft, (int)yc, zleft, (int)xright,(int)yc, zright, s, zb, c);
-	//printf("xl: %f + %f, xr: %f + %f, y: %f, zl: %f + %f, zr: %f + %f\n", xleft, dxl, xright, dxr, yc, zleft, dzl, zright, dzr);
+	printf("xl: %f + %f, xr: %f + %f, y: %f, zl: %f + %f, zr: %f + %f\n", xleft, dxl, xright, dxr, yc, zleft, dzl, zright, dzr);
     }
 
 }
 
 
+
+
+struct point {double x; double y; double z;};
+double view[3]={0,0,1};
+void normalize(double *vector){
+	double mag = sqrt( (vector[0] * vector[0]) +
+			(vector[1] * vector[1]) +
+			(vector[2] * vector[2]) );
+	if(mag>1){
+		vector[0] /= mag;
+		vector[1] /= mag;
+		vector[2] /= mag;
+	}
+}
+double dotProd(double *u,double *v){
+	normalize(u);
+	normalize(v);
+	return u[0] * v[0]+ u[1] * v[1] + u[2] * v[2];
+}
+double *vectorSub(double *u,double *v){
+	u[0]-=v[0];
+	u[1]-=v[1];
+	u[2]-=v[2];
+	return u;
+}
+double *vectorMult(double *v, double m){
+	v[0]*=m;
+	v[1]*=m;
+	v[2]*=m;
+	return v;
+}
+void ambient(color *c){
+	c->red=constants[0][0]*amb.red;
+	c->green=constants[1][0]*amb.green;
+	c->blue=constants[2][0]*amb.blue;
+}
+void diffuse(color *c, double *normal){
+	double NL = dotProd(normal,lightArr);
+	c->red += constants[0][1] * NL * lightArr[3];
+	c->green += constants[1][1] * NL * lightArr[4];
+	c->blue += constants[2][1] * NL * lightArr[5];
+}
+void specular(color *c, double *normal,int power){
+	double scalar = dotProd(normal,lightArr);
+	double *sMult = vectorMult(vectorMult(normal,2.0),scalar);
+	double *sub = vectorSub(sMult,lightArr);
+	scalar = dotProd(sub,view);
+	c->red += constants[0][2] * pow(scalar,power) * lightArr[3];
+	c->green += constants[1][2] * pow(scalar,power) * lightArr[4];
+	c->blue += constants[2][2] * pow(scalar,power) * lightArr[5];
+}
+void shading(struct matrix *polygons, int i, color *c){
+	double *normal;
+	normal = calculate_normal(polygons,i); //surface normal
+	normalize(lightArr);
+	normalize(normal);//normalize surface normal
+	if(shadeType==0){//flat shading
+		ambient(c);
+		diffuse(c,normal);
+		specular(c,normal,4);
+	}
+	if( c->red > 255 )
+		c->red = 255;
+	else if( c->red < 0 )
+		c->red = 0;
+	if( c->green > 255 )
+		c->green = 255;
+	else if( c->green < 0 )
+		c->green = 0;
+	if( c->blue > 255 )
+		c->blue = 255;
+	else if( c->blue < 0 )
+		c->blue = 0;
+}
 
 /*======== void add_polygon() ==========
 Inputs:   struct matrix *surfaces

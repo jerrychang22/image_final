@@ -9,7 +9,17 @@ color amb;
 double lightArr[6];
 int shadeType;
 
+
 void scanline_convert( struct matrix *points, int i, screen s, zbuffer zb, color c );
+
+void normalize(double *vector);
+double dotProd(double *u, double *v);
+double *vectorSub(double *u, double *v);
+double *vectorMult(double *u, double m);
+void ambient(color *c);
+void diffuse(color *c, double *normal);
+void specular(color *c, double *normal, int power);
+void shading(struct matrix *polygons, int i, color *c);
 
 //polygon organization
 void add_polygons( struct matrix * points, 
