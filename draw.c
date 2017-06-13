@@ -8,178 +8,53 @@
 #include "math.h"
 #include "gmath.h"
 
-#define min(a,b) ((a)<(b)?(a):(b))
-#define max(a,b) ((a)>(b)?(a):(b))
-
-void scanline_convert( struct matrix *points, int i, screen s, zbuffer zb , color c) {
-    double dxl, dxr, dzl, dzr;
-    int top, mid, bot;
-    double y0 = points->m[1][i];
-    double y1 = points->m[1][i + 1];
-    double y2 = points->m[1][i + 2];
-   
-    if (min(min(y0, y1), y2) == y0){
-    	bot = i;
-	if (min(y1, y2) == y1){
-		mid = i + 1;
-		top = i + 2;
-	}
-	else{
-		mid = i + 2;
-		top = i + 1;
-	}
-    }
-    if (min(min(y0, y1), y2) == y1){
-    	bot = i + 1;
-	if (min(y0, y2) == y0){
-		mid = i;
-		top = i + 2;
-	}
-	else{
-		mid = i + 2;
-		top = i;
-	}
-    }
-    if (min(min(y0, y1), y2) == y2){
-    	bot = i + 2;
-	if (min(y0, y1) == y0){
-		mid = i;
-		top = i + 1;
-	}
-	else{
-		mid = i + 1;
-		top = i;
-	}
-    }
-
-
-
-
-    //top x0, y0, z0
-    //mid x1, y1, z1
-    //bot x2, y2, z2
-    double x0 = points->m[0][top];
-    double x1 = points->m[0][mid];
-    double x2 = points->m[0][bot];
-
-    y0 = points->m[1][top];
-    y1 = points->m[1][mid];
-    y2 = points->m[1][bot];
-
-    double z0 = points->m[2][top];
-    double z1 = points->m[2][mid];
-    double z2 = points->m[2][bot];
-
-    dxr = (x0 - x2) / (y0 - y2);
-    dxl = (x1 - x2) / (y1 - y2);
-    dzr = (z0 - z2) / (y0 - y2);
-    dzl = (z1 - z2) / (y1 - y2);
-    if (y0 == y2 || y0 == y1) {
-	    if (x1 < x2) dxr = 0;
-	    else dxl = 0; 
-	    dzl = (z1 - z0) / (x1 - x0);
-    }
-    if (y1 == y2) {
-    	if (x1 < x2) dxl = 0;
-	else dxr = 0;
-	dzr = (z1 - z2) / (x1 - x2);
-    }
-
-    double yc = y2;
-    double xleft, xright, zleft, zright;
-    xleft = xright = x2;
-    zleft = zright = z2;
-
-    while(yc < y1){
-	xleft += dxl;
-	xright += dxr;
-	yc += 1;
-	zleft += dzl;
-	zright += dzr;
-//	//printf("xl: %f + %f, xr: %f + %f, y: %f, zl: %f + %f, zr: %f + %f\n", xleft, dxl, xright, dxr, yc, zleft, dzl, zright, dzr);
-    	draw_line((int)xleft, (int)yc, zleft, (int)xright, (int)yc, zright, s, zb, c);
-    }
-
-    dxl = (x0 - x1) / (y0 - y1);
-    dzl = (z0 - z1) / (y0 - y1);
-    
-    if (y0 == y2) {
-	    if (x1 < x2) dxr = 0;
-	    else dxl = 0; 
-	    dzl = (z1 - z0) / (x1 - x0);
-    }
-    if (y1 == y2) {
-    	if (x1 < x2) dxl = 0;
-	else dxr = 0;
-	dzr = (z1 - z2) / (x1 - x2);
-    }
-
-    yc = y1;
-    c.red = MAX_COLOR;
-    while(yc < y0){
-	xleft += dxl;
-	xright += dxr;
-	yc += 1;
-	zleft += dzl;
-	zright += dzr;
-
-	draw_line((int)xleft, (int)yc, zleft, (int)xright,(int)yc, zright, s, zb, c);
-	printf("xl: %f + %f, xr: %f + %f, y: %f, zl: %f + %f, zr: %f + %f\n", xleft, dxl, xright, dxr, yc, zleft, dzl, zright, dzr);
-    }
-
-}
-
-
-
-
-struct point {double x; double y; double z;};
 double view[3]={0,0,1};
 void normalize(double *vector){
 	double mag = sqrt( (vector[0] * vector[0]) +
-			(vector[1] * vector[1]) +
-			(vector[2] * vector[2]) );
+		     (vector[1] * vector[1]) +
+		     (vector[2] * vector[2]) );
 	if(mag>1){
-		vector[0] /= mag;
-		vector[1] /= mag;
-		vector[2] /= mag;
-	}
+	vector[0] /= mag;
+	vector[1] /= mag;
+  vector[2] /= mag;
 }
-double dotProd(double *u,double *v){
-	normalize(u);
-	normalize(v);
-	return u[0] * v[0]+ u[1] * v[1] + u[2] * v[2];
 }
-double *vectorSub(double *u,double *v){
-	u[0]-=v[0];
-	u[1]-=v[1];
-	u[2]-=v[2];
-	return u;
+double dotProd(double *v1,double *v2){
+	normalize(v1);
+	normalize(v2);
+	return v1[0] * v2[0]+ v1[1] * v2[1] + v1[2] * v2[2];
 }
-double *vectorMult(double *v, double m){
-	v[0]*=m;
-	v[1]*=m;
-	v[2]*=m;
-	return v;
+double* subV(double *v1,double *v2){
+	v1[0]-=v2[0];
+	v1[1]-=v2[1];
+	v1[2]-=v2[2];
+	return v1;
 }
-void ambient(color *c){
+double* mult(double *v, double m){
+		v[0]*=m;
+		v[1]*=m;
+		v[2]*=m;
+		return v;
+}
+void leAmbient(color *c){
 	c->red=constants[0][0]*amb.red;
 	c->green=constants[1][0]*amb.green;
 	c->blue=constants[2][0]*amb.blue;
 }
-void diffuse(color *c, double *normal){
+void leDiffuse(color *c, double *normal){
 	double NL = dotProd(normal,lightArr);
 	c->red += constants[0][1] * NL * lightArr[3];
 	c->green += constants[1][1] * NL * lightArr[4];
 	c->blue += constants[2][1] * NL * lightArr[5];
 }
-void specular(color *c, double *normal,int power){
+void leSpecular(color *c, double *normal,int exp){
 	double scalar = dotProd(normal,lightArr);
-	double *sMult = vectorMult(vectorMult(normal,2.0),scalar);
-	double *sub = vectorSub(sMult,lightArr);
+	double *sMult = mult(mult(normal,2.0),scalar);
+	double *sub = subV(sMult,lightArr);
 	scalar = dotProd(sub,view);
-	c->red += constants[0][2] * pow(scalar,power) * lightArr[3];
-	c->green += constants[1][2] * pow(scalar,power) * lightArr[4];
-	c->blue += constants[2][2] * pow(scalar,power) * lightArr[5];
+	c->red += constants[0][2] * pow(scalar,exp) * lightArr[3];
+	c->green += constants[1][2] * pow(scalar,exp) * lightArr[4];
+	c->blue += constants[2][2] * pow(scalar,exp) * lightArr[5];
 }
 void shading(struct matrix *polygons, int i, color *c){
 	double *normal;
@@ -187,23 +62,113 @@ void shading(struct matrix *polygons, int i, color *c){
 	normalize(lightArr);
 	normalize(normal);//normalize surface normal
 	if(shadeType==0){//flat shading
-		ambient(c);
-		diffuse(c,normal);
-		specular(c,normal,4);
-	}
+		leAmbient(c);
+		leDiffuse(c,normal);
+		leSpecular(c,normal,2);
+		}
 	if( c->red > 255 )
-		c->red = 255;
+	c->red = 255;
 	else if( c->red < 0 )
-		c->red = 0;
+	c->red = 0;
 	if( c->green > 255 )
-		c->green = 255;
+	c->green = 255;
 	else if( c->green < 0 )
-		c->green = 0;
+	c->green = 0;
 	if( c->blue > 255 )
-		c->blue = 255;
+	c->blue = 255;
 	else if( c->blue < 0 )
-		c->blue = 0;
+	c->blue = 0;
 }
+struct point{
+	double x;
+	double y;
+	double z;
+};
+struct point vertices[3];
+void sortVertices(struct point* vertices){
+	int i,j;
+	for(i=1;i<3;i++){
+    for(j=0;j<3-i;j++){
+        if(vertices[j].y>=vertices[j+1].y){
+            struct point temp = vertices[j];
+            vertices[j] = vertices[j+1];
+            vertices[j+1] = temp;
+      }
+    }
+	}
+}
+void scanline_convert( struct matrix *points, int i, screen s, zbuffer zb, color c) {
+	double tx,ty,mx,my,bx,by,tz,mz,bz,dx0,dx1,dz0,dz1;
+	//
+	shading(points,i,&c);
+	vertices[0].x=points->m[0][i];
+	vertices[0].y=points->m[1][i];
+	vertices[0].z=points->m[2][i];
+	vertices[1].x=points->m[0][i+1];
+	vertices[1].y=points->m[1][i+1];
+	vertices[1].z=points->m[2][i+1];
+	vertices[2].x=points->m[0][i+2];
+	vertices[2].y=points->m[1][i+2];
+	vertices[2].z=points->m[2][i+2];
+	sortVertices(vertices);
+	tx=vertices[2].x;
+	ty=vertices[2].y;
+	tz=vertices[2].z;
+	mx=vertices[1].x;
+	my=vertices[1].y;
+	mz=vertices[1].z;
+	bx=vertices[0].x;
+	by=vertices[0].y;
+	bz=vertices[0].z;
+	if(ty==by){
+		dx0 = 0;
+		dz0 = 0;
+	}
+	else{
+		dx0 = (tx-bx)/(ty-by);
+		dz0 = (tz-bz)/(ty-by);
+	}
+	if (my==by){
+		dx1 = 0;
+		dz1 = 0;
+	}
+	else {
+		dx1 = (mx-bx)/(my-by);
+		dz1 = (mz-bz)/(my-by);
+	}
+	double x0,x1,z0,z1;
+	x0=x1=bx;
+	z0=z1=bz;
+	double y=by;
+	while(y<=my){
+		draw_line(x0,y,z0,x1,y,z1,s,zb,c);
+		x0+=dx0;
+		x1+=dx1;
+		z0+=dz0;
+		z1+=dz1;
+		y++;
+	}
+	x1=mx;
+	z1=mz;
+	if (ty == my){
+		dx1 = 0;
+		dz1 = 0;
+	}
+	else {
+		dx1 = (tx-mx)/(ty-my);
+		dz1 = (tz-mz)/(ty-my);
+	}
+	while(y<ty){
+		draw_line(x0,y,z0,x1,y,z1,s,zb,c);
+		x0+=dx0;
+		x1+=dx1;
+		z0+=dz0;
+		z1+=dz1;
+		y++;
+	}
+}
+
+
 
 /*======== void add_polygon() ==========
 Inputs:   struct matrix *surfaces
@@ -245,22 +210,17 @@ void draw_polygons( struct matrix *polygons, screen s, zbuffer zb, color c ) {
     printf("Need at least 3 points to draw a polygon!\n");
     return;
   }
-
   int point;
   double *normal;
-
   for (point=0; point < polygons->lastcol-2; point+=3) {
 
     normal = calculate_normal(polygons, point);
 
     if ( normal[2] > 0 ) {
 
-      //printf("polygon %d\n", point);
-      scanline_convert( polygons, point, s, zb , c);
-      c.red = 0;
-      c.green = 255;
-      c.blue = 0;
-      draw_line( polygons->m[0][point],
+    //  printf("polygon %d\n", point);
+        scanline_convert( polygons, point, s, zb,c);
+    /*  draw_line( polygons->m[0][point],
       		 polygons->m[1][point],
       		 polygons->m[2][point],
       		 polygons->m[0][point+1],
@@ -280,7 +240,7 @@ void draw_polygons( struct matrix *polygons, screen s, zbuffer zb, color c ) {
       		 polygons->m[0][point+2],
       		 polygons->m[1][point+2],
       		 polygons->m[2][point+2],
-      		 s, zb, c);
+      		 s, zb, c); */
        }
   }
 }
@@ -721,7 +681,6 @@ void draw_line(int x0, int y0, double z0,
     y1 = yt;
     z1 = z;
   }
-
   x = x0;
   y = y0;
   z = z0;
@@ -771,10 +730,11 @@ void draw_line(int x0, int y0, double z0,
       loop_end = y;
     }
   }
-
-  dz = (z1 - z0) / (double)(loop_end - loop_start);
-  
-  
+	if ( loop_start==loop_end)
+      dz = 0;
+  else
+      dz = (z1 - z0) / (loop_end - loop_start);
+	//dz = (z1-z)/sqrt(pow((x1-x),2)+pow((y1-y), 2));
   while ( loop_start < loop_end ) {
 
     plot( s, zb, c, x, y, z );
@@ -792,7 +752,7 @@ void draw_line(int x0, int y0, double z0,
       y+= dy_east;
       d+= d_east;
     }
-    z += dz;
+		z+=dz;
     loop_start++;
   } //end drawing loop
   plot( s, zb, c, x1, y1, z );
