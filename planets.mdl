@@ -1,0 +1,47 @@
+shading flat
+//ambient 255 255 255
+light l1 1 0 0 150 150 0
+light l2 -1 0 0 150 150 0 
+constants white 0.25 0.5 0.25 0.25 0.5 0.25 0.25 0.5 0.25
+frames 100
+basename planets
+//set spin .1
+push
+move 250 250 0
+rotate y 360 spin
+push
+move 150 0 75
+rotate y 360 spin
+sphere white 0 0 0 25
+pop
+
+push
+move 200 0 -100
+rotate y 360 spin
+sphere white 0 0 0 35
+pop
+
+push
+move -275 0 300
+rotate y 360 spin
+sphere white 0 0 0 50
+pop
+
+push
+move -150 0 -300
+rotate y 360 spin
+sphere white 0 0 0 10
+pop
+
+push
+move 500 0 700
+rotate y 360 spin
+sphere white 0 0 0 15
+pop
+
+push
+sphere white 0 0 0 80
+pop
+
+
+vary spin 0 99 0 1
